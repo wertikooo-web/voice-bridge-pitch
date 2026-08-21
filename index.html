@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoiceBridge · Pitch Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#ffffff;color:#111111;font-family:'Inter',sans-serif;font-size:16px;min-height:100vh}
+.app{display:grid;grid-template-columns:260px 1fr;grid-template-rows:64px 1fr auto;min-height:100vh;max-width:1200px;margin:0 auto;border:2px solid #111111}
+
+/* HEADER */
+header{grid-column:1/-1;background:#111111;color:#ffffff;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:2px solid #111111}
+.logo{font-size:14px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:#ffffff}
+.logo span{color:#aaaaaa;font-weight:400}
+.session{font-family:'JetBrains Mono',monospace;font-size:12px;color:#aaaaaa;display:flex;align-items:center;gap:8px}
+.sdot{width:8px;height:8px;border-radius:50%;background:#22cc66}
+
+/* SIDEBAR */
+aside{background:#f8f8f8;border-right:2px solid #111111;padding:20px;display:flex;flex-direction:column;gap:16px;overflow-y:auto}
+.sec-title{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#666666;margin-bottom:4px}
+
+.inv-btn{display:flex;align-items:center;gap:12px;padding:12px;border:2px solid transparent;border-radius:4px;cursor:pointer;background:transparent;text-align:left;width:100%;transition:all 0.15s}
+.inv-btn:hover{background:#eeeeee;border-color:#aaaaaa}
+.inv-btn.active{background:#111111;border-color:#111111}
+.inv-btn.active .inv-name{color:#ffffff}
+.inv-btn.active .inv-sub{color:#aaaaaa}
+.inv-ico{font-size:20px;flex-shrink:0}
+.inv-ico.inv-svg{display:flex;align-items:center;justify-content:center}
+.inv-name{font-size:15px;font-weight:600;color:#111111;display:block}
+.inv-sub{font-size:12px;color:#666666;display:block;margin-top:2px;font-family:'JetBrains Mono',monospace}
+
+.inv-card{background:#ffffff;border:2px solid #111111;border-radius:4px;padding:16px}
+.inv-card-ava{width:64px;height:64px;border-radius:50%;overflow:hidden;margin-bottom:12px;display:flex;align-items:center;justify-content:center}
+.inv-card-name{font-size:18px;font-weight:700;color:#111111;margin-bottom:4px}
+.inv-card-role{font-size:11px;font-weight:600;letter-spacing:2px;color:#666666;font-family:'JetBrains Mono',monospace;margin-bottom:12px}
+.inv-card-bio{font-size:14px;color:#333333;line-height:1.6;font-style:italic}
+
+.score-box{background:#ffffff;border:2px solid #111111;border-radius:4px;padding:16px}
+.score-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.score-lbl{font-size:13px;font-weight:500;color:#111111;min-width:100px}
+.score-track{flex:1;height:4px;background:#dddddd;border-radius:2px}
+.score-fill{height:4px;background:#111111;border-radius:2px;width:0%;transition:width 0.8s ease}
+.score-val{font-size:13px;font-weight:600;color:#111111;min-width:32px;text-align:right;font-family:'JetBrains Mono',monospace}
+
+/* MAIN */
+main{display:flex;flex-direction:column;overflow:hidden;background:#ffffff}
+.chat{flex:1;overflow-y:auto;padding:24px 28px;display:flex;flex-direction:column;gap:16px;min-height:300px;max-height:420px}
+
+.msg{display:flex;flex-direction:column;gap:6px;animation:fadeIn 0.3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.mh{display:flex;align-items:center;gap:8px}
+.mava{width:32px;height:32px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.mname{font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#666666}
+
+.bubble{padding:14px 18px;border-radius:4px;font-size:16px;line-height:1.7;max-width:88%}
+.bubble.inv{background:#f5f5f5;border:2px solid #111111;border-left:5px solid #111111;color:#111111}
+.bubble.founder{background:#111111;border:2px solid #111111;color:#ffffff;align-self:flex-end}
+
+.typing{display:flex;gap:5px;padding:14px 18px;background:#f5f5f5;border:2px solid #111111;border-left:5px solid #111111;width:fit-content;border-radius:4px}
+.tdot{width:6px;height:6px;border-radius:50%;background:#111111;animation:blink 1.2s infinite}
+.tdot:nth-child(2){animation-delay:0.2s}.tdot:nth-child(3){animation-delay:0.4s}
+@keyframes blink{0%,80%,100%{opacity:0.2}40%{opacity:1}}
+
+/* QUESTIONS */
+.qs{padding:16px 28px;border-top:3px solid #000000;background:#eeeeee;display:flex;flex-wrap:wrap;gap:8px}
+.ql{width:100%;font-size:12px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:#000000;margin-bottom:6px}
+.qbtn{padding:8px 14px;border:2px solid #111111;border-radius:4px;background:#ffffff;font-size:15px;font-weight:700;color:#000000;cursor:pointer;transition:all 0.15s;font-family:'Inter',sans-serif}
+.qbtn:hover{background:#111111;color:#ffffff}
+.qbtn:disabled{opacity:0.3;cursor:not-allowed}
+
+/* INPUT */
+footer{grid-column:2;padding:16px 20px;border-top:3px solid #000000;background:#eeeeee;display:flex;gap:10px;align-items:center}
+.mic-btn{width:52px;height:52px;border-radius:50%;border:3px solid #000000;background:#f0f0f0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;transition:all 0.2s}
+.mic-btn:hover{background:#eeeeee}
+.mic-btn.rec{background:#16a34a;border-color:#16a34a;color:#ffffff;animation:mpulse 1s infinite}
+@keyframes mpulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(22,163,74,0.5)}50%{transform:scale(1.05);box-shadow:0 0 0 8px rgba(22,163,74,0)}}
+textarea{flex:1;border:2px solid #111111;border-radius:4px;background:#ffffff;color:#000000;font-family:'Inter',sans-serif;font-size:17px;font-weight:600;padding:12px 14px;resize:none;min-height:52px;max-height:120px;line-height:1.5}
+textarea:focus{outline:none;border-color:#555555}
+textarea::placeholder{color:#444444;font-weight:500}
+textarea:disabled{opacity:0.4}
+.sbtn{padding:0 24px;height:52px;background:#111111;color:#ffffff;border:2px solid #111111;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;letter-spacing:2px;cursor:pointer;white-space:nowrap;transition:all 0.15s;display:flex;align-items:center;gap:8px}
+.sbtn:hover{background:#333333}
+.sbtn:disabled{opacity:0.4;cursor:not-allowed}
+.mentor-btn{padding:0 16px;height:52px;background:#166534;color:#fff;border:2px solid #166534;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;cursor:pointer;white-space:nowrap;transition:all 0.15s;display:flex;align-items:center;gap:6px}
+.mentor-btn:hover{background:#15803d}
+.mentor-btn:disabled{opacity:0.4;cursor:not-allowed}
+.bubble.mentor-tip{background:#f0fdf4;border:2px solid #166534;border-left:5px solid #4ade80;color:#14532d;font-style:italic}
+.mentor-label{font-size:11px;font-weight:700;letter-spacing:1px;color:#166534;text-transform:uppercase}
+.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* INTRO */
+.intro{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:40px;gap:10px}
+.intro h2{font-size:28px;font-weight:700;color:#111111}
+.intro p{font-size:16px;color:#555555;max-width:380px;line-height:1.6}
+
+/* KEY SCREEN */
+#ks{position:fixed;inset:0;background:rgba(255,255,255,0.97);display:flex;align-items:center;justify-content:center;z-index:9999}
+.kb{background:#ffffff;border:3px solid #111111;border-radius:8px;padding:40px;max-width:440px;width:90%;text-align:center}
+.kb h2{font-size:24px;font-weight:700;color:#111111;margin-bottom:8px}
+.kb p{font-size:15px;color:#555555;line-height:1.6;margin-bottom:24px}
+.kb input{width:100%;padding:14px;border:2px solid #aaaaaa;border-radius:4px;font-size:15px;font-family:'JetBrains Mono',monospace;color:#111111;background:#f8f8f8;margin-bottom:10px}
+.kb input:focus{outline:none;border-color:#111111}
+.kb button{width:100%;padding:14px;background:#111111;color:#ffffff;border:none;border-radius:4px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:1px;margin-top:6px}
+.kb button:hover{background:#333333}
+.kb .hint{font-size:13px;color:#888888;margin-top:16px;line-height:1.6}
+.kb a{color:#111111;font-weight:600}
+
+@media(max-width:700px){
+  .app{grid-template-columns:1fr}
+  aside{display:none}
+  footer{grid-column:1}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">Voice<span>Bridge</span> &nbsp;·&nbsp; Питч-симулятор</div>
+    <div style="display:flex;align-items:center;gap:16px"><div class="session"><div class="sdot"></div>СЕССИЯ &nbsp;<span id="stimer">00:00</span></div><button onclick="endSession()" style="padding:6px 14px;background:transparent;border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:4px;font-size:12px;cursor:pointer;font-family:'JetBrains Mono',monospace;letter-spacing:1px" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='transparent'">ЗАВЕРШИТЬ</button></div>
+  </header>
+
+  <aside>
+    <div>
+      <div class="sec-title">Выбери инвестора</div>
+      <button class="inv-btn active" onclick="selInv(0,this)"><span class="inv-ico inv-svg"><svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#1a1a2e"/><circle cx="16" cy="12" r="5.5" fill="#fff" opacity="0.9"/><path d="M5 30c0-6.075 4.925-11 11-11s11 4.925 11 11" fill="#fff" opacity="0.9"/></svg></span><span><span class="inv-name">Виктор</span><span class="inv-sub">Скептик · Железо</span></span></button>
+      <button class="inv-btn" onclick="selInv(1,this)"><span class="inv-ico inv-svg"><svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#1a2e1a"/><circle cx="16" cy="11.5" r="5" fill="#fff" opacity="0.9"/><path d="M6 30c0-5.523 4.477-10 10-10s10 4.477 10 10" fill="#fff" opacity="0.9"/><path d="M11 22 Q16 25.5 21 22" stroke="#fff" stroke-width="2" fill="none" opacity="0.7"/></svg></span><span><span class="inv-name">Анна</span><span class="inv-sub">Финансист · Unit Econ</span></span></button>
+      <button class="inv-btn" onclick="selInv(2,this)"><span class="inv-ico inv-svg"><svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#1a1a1a"/><circle cx="16" cy="12" r="5.5" fill="#fff" opacity="0.9"/><path d="M5 30c0-6.075 4.925-11 11-11s11 4.925 11 11" fill="#fff" opacity="0.9"/><path d="M10 10 Q16 7 22 10" stroke="#fff" stroke-width="1.5" fill="none" opacity="0.5"/></svg></span><span><span class="inv-name">Michael</span><span class="inv-sub">Global VC · Market</span></span></button>
+      <button class="inv-btn" onclick="selInv(3,this)"><span class="inv-ico inv-svg"><svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#2e1a1a"/><circle cx="16" cy="11.5" r="5" fill="#fff" opacity="0.9"/><path d="M6 30c0-5.523 4.477-10 10-10s10 4.477 10 10" fill="#fff" opacity="0.9"/><path d="M11 22 Q16 25.5 21 22" stroke="#fff" stroke-width="2" fill="none" opacity="0.7"/></svg></span><span><span class="inv-name">Лена</span><span class="inv-sub">Impact · Social</span></span></button>
+    </div>
+    <div class="inv-card">
+      <div class="inv-card-ava" id="ic-ava"><svg width="64" height="64" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#222"/><circle cx="16" cy="12" r="5" fill="#fff"/><path d="M6 28c0-5.5 4.5-10 10-10s10 4.5 10 10" fill="#fff"/></svg></div>
+      <div class="inv-card-name" id="ic-name">Виктор Шевченко</div>
+      <div class="inv-card-role" id="ic-role">PARTNER · HARDWARE FUND</div>
+      <div class="inv-card-bio" id="ic-bio">«Я видел сотни IoT-стартапов. Большинство умирают на масштабировании. Убедите меня, что вы — исключение.»</div>
+    </div>
+    <div class="score-box">
+      <div class="sec-title" style="margin-bottom:12px">Оценка питча</div>
+      <div class="score-row"><span class="score-lbl">Убедительность</span><div class="score-track"><div class="score-fill" id="s1"></div></div><span class="score-val" id="v1">—</span></div>
+      <div class="score-row"><span class="score-lbl">Конкретность</span><div class="score-track"><div class="score-fill" id="s2"></div></div><span class="score-val" id="v2">—</span></div>
+      <div class="score-row"><span class="score-lbl">Уверенность</span><div class="score-track"><div class="score-fill" id="s3"></div></div><span class="score-val" id="v3">—</span></div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="chat" id="chat">
+      <div class="intro"><h2>Питч-сессия</h2><p>Инвестор готов. Выбери вопрос снизу или напиши сам — Claude отвечает от лица инвестора в реальном времени.</p></div>
+    </div>
+    <div class="qs" id="qbox"><div class="ql">Острые вопросы инвестора</div></div>
+  </main>
+
+  <footer>
+    <button class="mic-btn" id="mbtn" onclick="toggleMic()" title="Говорить голосом">🎤</button>
+    <textarea id="inp" placeholder="Ваш ответ инвестору..." rows="1" onkeydown="onKey(event)" oninput="grow(this)"></textarea>
+    <button class="mentor-btn" id="mbtn2" onclick="askMentor()" title="Ментор ответит на последний вопрос">🌱 МЕНТОР</button>
+    <button class="sbtn" id="sbtn" onclick="doSend()">
+      <div class="spin" id="spin"></div>
+      <span id="slbl">ОТПРАВИТЬ</span>
+    </button>
+  </footer>
+</div>
+
+<script>
+
+const AVATARS = {
+  4: `<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#1a3a1a"/><circle cx="16" cy="12" r="5" fill="#fff"/><path d="M6 28c0-5.5 4.5-10 10-10s10 4.5 10 10" fill="#fff"/><circle cx="24" cy="8" r="4" fill="#4ade80"/><text x="24" y="11" text-anchor="middle" font-size="5" fill="#000" font-weight="bold">★</text></svg>`,
+  0: `<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#222"/><circle cx="16" cy="12" r="5" fill="#fff"/><path d="M6 28c0-5.5 4.5-10 10-10s10 4.5 10 10" fill="#fff"/></svg>`,
+  1: `<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#444"/><circle cx="16" cy="12" r="5" fill="#fff"/><path d="M6 28c0-5.5 4.5-10 10-10s10 4.5 10 10" fill="#fff"/><path d="M10 19 Q16 23 22 19" stroke="#fff" stroke-width="1.5" fill="none"/></svg>`,
+  2: `<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#222"/><circle cx="16" cy="12" r="5" fill="#fff"/><path d="M6 28c0-5.5 4.5-10 10-10s10 4.5 10 10" fill="#fff"/></svg>`,
+  3: `<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#444"/><circle cx="16" cy="12" r="5" fill="#fff"/><path d="M6 28c0-5.5 4.5-10 10-10s10 4.5 10 10" fill="#fff"/><path d="M10 19 Q16 23 22 19" stroke="#fff" stroke-width="1.5" fill="none"/></svg>`
+};
+const AVATARS_LG = {
+  4: `<svg width="64" height="64" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#1a3a1a"/><circle cx="16" cy="12" r="5" fill="#fff"/><path d="M6 28c0-5.5 4.5-10 10-10s10 4.5 10 10" fill="#fff"/><circle cx="24" cy="8" r="4" fill="#4ade80"/><text x="24" y="11" text-anchor="middle" font-size="5" fill="#000" font-weight="bold">★</text></svg>`,
+  0: `<svg width="64" height="64" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#222"/><circle cx="16" cy="12" r="5" fill="#fff"/><path d="M6 28c0-5.5 4.5-10 10-10s10 4.5 10 10" fill="#fff"/></svg>`,
+  1: `<svg width="64" height="64" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#444"/><circle cx="16" cy="12" r="5" fill="#fff"/><path d="M6 28c0-5.5 4.5-10 10-10s10 4.5 10 10" fill="#fff"/><path d="M10 19 Q16 23 22 19" stroke="#fff" stroke-width="1.5" fill="none"/></svg>`,
+  2: `<svg width="64" height="64" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#222"/><circle cx="16" cy="12" r="5" fill="#fff"/><path d="M6 28c0-5.5 4.5-10 10-10s10 4.5 10 10" fill="#fff"/></svg>`,
+  3: `<svg width="64" height="64" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#444"/><circle cx="16" cy="12" r="5" fill="#fff"/><path d="M6 28c0-5.5 4.5-10 10-10s10 4.5 10 10" fill="#fff"/><path d="M10 19 Q16 23 22 19" stroke="#fff" stroke-width="1.5" fill="none"/></svg>`
+};
+const INVS=[
+  {emoji:'🎯',name:'Виктор Шевченко',role:'PARTNER · HARDWARE FUND',
+   bio:'«Я видел сотни IoT-стартапов. Большинство умирают на масштабировании. Убедите меня, что вы — исключение.»',
+   style:'жёсткий скептик по hardware. Перебивает расплывчатые ответы. Требует цифры. Называет конкурентов.',
+   open:'Добрый день. Прочитал ваш one-pager. Интересно. У меня пять минут. Начинайте.',
+   qs:['Почему пользователь не позвонит через WhatsApp?','Сколько стоит производство одного устройства?','Как масштабируетесь до 100 000 единиц?','Кто главный конкурент и почему вы лучше?']},
+  {emoji:'📊',name:'Анна Карпова',role:'ANALYST · GROWTH FUND',
+   bio:'«Красивые истории не окупают инвестиции. Покажите математику: CAC, LTV, срок окупаемости.»',
+   style:'финансист. Не верит без расчётов. Копает CAC, LTV, churn, маржу.',
+   open:'Итак, VoiceBridge. Прежде чем начнём — какой у вас CAC и LTV на текущий момент?',
+   qs:['Какой у вас CAC и LTV?','Когда выходите на breakeven?','Какая маржинальность устройства?','Почему подписка €20, а не €50?']},
+  {emoji:'🌍',name:'Michael Reynolds',role:'PARTNER · GLOBAL VENTURES',
+   bio:'"Show me the market. Romania is interesting, but what\'s the global play here?"',
+   style:'global VC. Thinks about TAM, moats, international expansion. Mix of Russian and English.',
+   open:'Show me the market. Romania is interesting, but what\'s the global play here?',
+   qs:["What's your total addressable market globally?",'How do you defend against Amazon entering this space?',"Why now — why hasn't this been built before?",'What\'s the path from Eastern Europe to Western markets?']},
+  {emoji:'❤️',name:'Лена Морозова',role:'FOUNDER · IMPACT FUND',
+   bio:'«Технологии должны возвращать людей друг к другу. Как вы измеряете реальное влияние?»',
+   style:'impact-инвестор. Спрашивает про реальный эффект, доступность, истории пользователей.',
+   open:'Расскажите мне одну реальную историю. Не про технологию — про человека, которому это помогло.',
+   qs:['Как вы измеряете счастье пользователей?','Что происходит с пожилым, у которого нет детей?','Как сделать устройство доступным для бедных семей?','Как вы предотвращаете зависимость от устройства?']},
+  {emoji:'🌱',name:'Сергей Наставник',role:'MENTOR · STARTUP ADVISOR',
+   bio:'«Я здесь чтобы помочь тебе найти лучшие слова для твоей идеи. Давай вместе разберём что работает.»',
+   style:'опытный ментор и советник стартапов. НЕ критикует — помогает. Находит сильные стороны в каждом ответе. Задаёт наводящие вопросы которые помогают фаундеру лучше сформулировать мысль. Говорит "это хорошо, потому что..." и "попробуй добавить...". Всегда поддерживает и мотивирует. Помогает найти убедительные аргументы и сильные формулировки.',
+   open:'Привет! Я здесь чтобы помочь тебе отточить питч, а не критиковать. Расскажи про VoiceBridge своими словами — и я помогу найти самые сильные аргументы.',
+   qs:['Как мне лучше объяснить почему это не Alexa?','Помоги сформулировать главное преимущество','Как ответить на вопрос про масштабирование?','Что самое убедительное в нашей бизнес-модели?']}
+];
+
+let cur=0,hist=[],loading=false,sc={a:0,b:0,c:0};
+const t0=Date.now();
+setInterval(()=>{const s=Math.floor((Date.now()-t0)/1000);document.getElementById('stimer').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');},1000);
+
+function selInv(i,el){
+  cur=i;
+  document.querySelectorAll('.inv-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  const v=INVS[i];
+  const sz=64; document.getElementById('ic-ava').innerHTML=AVATARS[i].replace(/width="32"/g,'width="'+sz+'"').replace(/height="32"/g,'height="'+sz+'"');
+  document.getElementById('ic-name').textContent=v.name;
+  document.getElementById('ic-role').textContent=v.role;
+  document.getElementById('ic-bio').textContent=v.bio;
+  renderQs();hist=[];msgCount=0;sc={a:0,b:0,c:0};document.querySelectorAll('.score-fill').forEach(b=>b.style.width='0%');['v1','v2','v3'].forEach(id=>document.getElementById(id).textContent='—');
+  document.getElementById('chat').innerHTML='<div class="intro"><h2>'+v.name.split(' ')[0]+'</h2><p style="font-style:italic">'+v.role+'</p></div>';
+  setTimeout(()=>addInv(v.open, false),500);
+}
+
+function renderQs(){
+  const b=document.getElementById('qbox');
+  b.innerHTML='<div class="ql">Острые вопросы инвестора</div>';
+  INVS[cur].qs.forEach(q=>{
+    const btn=document.createElement('button');
+    btn.className='qbtn';btn.textContent=q;
+    btn.onclick=()=>{if(!loading){addInv(q, false);}};
+    b.appendChild(btn);
+  });
+}
+
+function addInv(text, addToHist=true){
+  const v=INVS[cur],c=document.getElementById('chat');
+  const d=document.createElement('div');d.className='msg';
+  d.innerHTML='<div class="mh"><div class="mava" style="background:none;border:none;">'+AVATARS[cur]+'</div><div class="mname">'+v.name.split(' ')[0]+'</div></div><div class="bubble inv">'+esc(text)+'</div>';
+  c.appendChild(d);
+  if(addToHist) hist.push({role:'assistant',content:text});
+  lastInvQuestion = text; // запоминаем последний вопрос инвестора
+  scroll();
+}
+
+function addFounder(text){
+  const c=document.getElementById('chat');
+  const d=document.createElement('div');d.className='msg';d.style.alignItems='flex-end';
+  d.innerHTML='<div class="mh" style="flex-direction:row-reverse"><div class="mname">Фаундер</div><div class="mava"><svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="16" fill="#111"/><circle cx="16" cy="12" r="5" fill="#fff"/><path d="M6 28c0-5.5 4.5-10 10-10s10 4.5 10 10" fill="#fff"/><text x="16" y="30" text-anchor="middle" fill="#fff" font-size="8">ФАУ</text></svg></div></div><div class="bubble founder">'+esc(text)+'</div>';
+  c.appendChild(d);hist.push({role:'user',content:text});scroll();updScore(text);
+}
+
+function onKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend();}}
+function grow(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+
+// Главная функция отправки — всегда работает
+function doSend(){
+  if(loading) return;
+  if(isRec){ micStop(); }
+  const inp=document.getElementById('inp');
+  const t=inp.value.trim();
+  if(!t) return;
+  // сбрасываем micFinal чтобы onresult не переписал поле после очистки
+  micFinal='';
+  inp.value=''; inp.style.height='auto';
+  addFounder(t); askReply();
+}
+
+async function askReply(){
+  setLoad(true);
+  const v=INVS[cur];
+  const sys=`Ты — ${v.name}, ${v.role}. Характер: ${v.style}\n\nКонтекст о VoiceBridge:\n- Устройство голосовой связи: пожилые родители ↔ взрослые дети\n- ESP32-S3, WebSocket, push-to-talk, задержка < 1 сек\n- Без экрана — одно касание = уведомление сыну/дочери\n- B2C €250 + €20/мес; B2B лицензирование\n- Рынок: Румыния 3.4 млн пожилых, 1.2 млн диаспора за рубежом\n- Lunara AI: ИИ-компаньон (двойное касание)\n\nПравила: 2-3 предложения реакции + ОДИН острый вопрос. Живой тон.`;
+
+  const chat=document.getElementById('chat');
+  const td=document.createElement('div');td.id='typing';td.className='msg';
+  td.innerHTML='<div class="mh"><div class="mava" style="background:none;border:none;">'+AVATARS[cur]+'</div><div class="mname">'+v.name.split(' ')[0]+'</div></div><div class="typing"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div>';
+  chat.appendChild(td);scroll();
+
+  try{
+    const key=localStorage.getItem('vb_key')||'';
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,system:sys,messages:hist})
+    });
+    const data=await r.json();
+    const reply=data.content?.[0]?.text||'Интересно. Продолжайте.';
+    document.getElementById('typing')?.remove();
+    addInv(reply, true);
+  }catch(e){
+    document.getElementById('typing')?.remove();
+    addInv('Ошибка соединения. Проверьте API ключ и попробуйте снова.', false);
+  }
+  setLoad(false);
+}
+
+let msgCount=0;
+function updScore(t){
+  msgCount++;
+  const hasNum=/\d+/.test(t);
+  const hasConcrete=/(потому|благодаря|именно|например|рынок|млн|тыс|€|процент|пользовател|клиент)/i.test(t);
+  const confident=!/(возможно|наверное|не знаю|может быть|не уверен)/i.test(t);
+  const long=t.length>120;
+
+  // накапливаем медленно — каждое сообщение добавляет немного
+  sc.a=Math.min(100,sc.a+(long?6:3)+(hasConcrete?5:0));
+  sc.b=Math.min(100,sc.b+(hasNum?7:2));
+  sc.c=Math.min(100,sc.c+(confident?6:1));
+
+  // показываем только после 3 сообщений
+  if(msgCount<3){
+    document.getElementById('v1').textContent='—';
+    document.getElementById('v2').textContent='—';
+    document.getElementById('v3').textContent='—';
+    return;
+  }
+  setTimeout(()=>{
+    ['a','b','c'].forEach((k,i)=>{
+      const v=Math.round(sc[k]);
+      document.getElementById('s'+(i+1)).style.width=v+'%';
+      document.getElementById('v'+(i+1)).textContent=v+'%';
+    });
+  },200);
+}
+
+function setLoad(v){
+  loading=v;
+  document.getElementById('inp').disabled=v;
+  document.getElementById('sbtn').disabled=v;
+  document.getElementById('spin').style.display=v?'block':'none';
+  document.getElementById('slbl').textContent=v?'ДУМАЕТ...':'ОТПРАВИТЬ';
+  setQs(v);
+}
+function setQs(v){document.querySelectorAll('.qbtn').forEach(b=>b.disabled=v);}
+function scroll(){const c=document.getElementById('chat');setTimeout(()=>c.scrollTo({top:c.scrollHeight,behavior:'smooth'}),50);}
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');}
+
+// MICROPHONE
+let recog=null,isRec=false,micFinal='';
+
+function toggleMic(){
+  if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){
+    alert('Голосовой ввод работает только в Chrome.');return;
+  }
+  if(isRec){ micStop(); doSend(); return; }
+  micStart();
+}
+
+function micStart(){
+  try{
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    recog=new SR();
+    recog.lang='ru-RU';
+    recog.continuous=true;
+    recog.interimResults=true;
+    micFinal='';
+
+    recog.onstart=()=>{
+      isRec=true;
+      micUi(true);
+      document.getElementById('inp').value='';
+    };
+    recog.onresult=(e)=>{
+      let interim='';
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        if(e.results[i].isFinal) micFinal+=e.results[i][0].transcript+' ';
+        else interim+=e.results[i][0].transcript;
+      }
+      const inp=document.getElementById('inp');
+      inp.value=(micFinal+interim).trim();
+      grow(inp);
+    };
+    recog.onend=()=>{
+      if(isRec){ try{ recog.start(); }catch(e){ isRec=false; micUi(false); } }
+    };
+    recog.onerror=(e)=>{
+      if(e.error==='no-speech'||e.error==='aborted') return;
+      isRec=false; micUi(false);
+    };
+    recog.start();
+  }catch(e){ alert('Ошибка микрофона: '+e.message); }
+}
+
+function micStop(){
+  isRec=false;
+  micUi(false);
+  try{ recog.stop(); }catch(e){}
+}
+
+function micUi(on){
+  const mb=document.getElementById('mbtn');
+  if(on){
+    mb.classList.add('rec');
+    mb.textContent='🟢'; mb.style.fontSize='18px';
+    mb.title='Нажми чтобы остановить и отправить';
+    document.getElementById('inp').placeholder='Говорите...';
+  } else {
+    mb.classList.remove('rec');
+    mb.textContent='🎤'; mb.style.fontSize='22px';
+    mb.title='Говорить голосом';
+    document.getElementById('inp').placeholder='Ваш ответ инвестору...';
+  }
+}
+
+// KEY SCREEN
+function showKey(){
+  const div=document.createElement('div');div.id='ks';
+  div.innerHTML='<div class="kb"><h2>VoiceBridge · Питч-симулятор</h2><p>Для работы нужен API ключ Anthropic.<br>Хранится только в вашем браузере.</p><input id="ki" type="password" placeholder="sk-ant-api03-..."/><button onclick="saveKey()">НАЧАТЬ ПИТЧ-СЕССИЮ →</button><div class="hint">Получить ключ: <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a><br>При регистрации — $5 бесплатного кредита</div></div>';
+  document.body.appendChild(div);
+  document.getElementById('ki').addEventListener('keydown',e=>{if(e.key==='Enter')saveKey();});
+}
+function saveKey(){
+  const v=document.getElementById('ki').value.trim();
+  if(!v.startsWith('sk-')){document.getElementById('ki').style.borderColor='#cc0000';return;}
+  localStorage.setItem('vb_key',v);
+  document.getElementById('ks').remove();
+  init();
+}
+function init(){renderQs();setQs(false);setTimeout(()=>addInv(INVS[0].open, false),600);}
+
+
+// MENTOR ADVICE
+let lastInvQuestion = '';
+
+function askMentor(){
+  if(loading) return;
+  if(!lastInvQuestion){ 
+    alert('Сначала выбери вопрос инвестора или дождись его вопроса.'); 
+    return; 
+  }
+  const mb2 = document.getElementById('mbtn2');
+  mb2.disabled = true;
+  mb2.textContent = '💭 Думает...';
+
+  const sys = `Ты — Сергей, опытный ментор стартапов. Фаундер только что получил вопрос от инвестора и просит совета.
+
+Контекст о VoiceBridge:
+- Устройство голосовой связи: пожилые родители ↔ взрослые дети
+- ESP32-S3, WebSocket, push-to-talk, задержка < 1 сек, без экрана
+- B2C €250 + €20/мес; B2B лицензирование
+- Рынок: Румыния 3.4 млн пожилых, 1.2 млн диаспора за рубежом
+- Lunara AI: ИИ-компаньон (двойное касание)
+- Главный инсайт: "Alexa даёт доступ к Amazon. VoiceBridge даёт маме доступ к тебе."
+
+Твоя задача: дай фаундеру конкретный готовый ответ на вопрос инвестора.
+Формат СТРОГО такой:
+<<<готовый ответ фаундера, 1-2 предложения, от первого лица>>>
+
+Потом 1 предложение — почему это работает.
+
+Пример:
+<<<WhatsApp слишком сложен для пожилых — нужно найти контакт, нажать кнопку. У нас одно касание и семья уже слышит друг друга.>>>
+
+Это работает потому что ты переводишь разговор с технологии на боль пользователя.
+
+Коротко и конкретно. Не начинай с "Скажи вот так".`;
+
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':localStorage.getItem('vb_key')||'','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,system:sys,
+      messages:[{role:'user',content:'Вопрос инвестора: "'+lastInvQuestion+'"'}]})
+  })
+  .then(r=>r.json())
+  .then(data=>{
+    const reply = data.content?.[0]?.text || 'Не удалось получить совет.';
+    const chat = document.getElementById('chat');
+    const msgId = 'mentor-' + Date.now();
+    const d = document.createElement('div');
+    d.className = 'msg';
+    d.innerHTML = `
+      <div class="mh"><div class="mava" style="background:#166534;border:none;color:#fff;font-size:14px">🌱</div><div class="mentor-label">Сергей · Ментор</div></div>
+      <div class="bubble mentor-tip" id="${msgId}">${esc(reply)}</div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button onclick="mentorToField('${msgId}')" style="padding:6px 12px;border:1.5px solid #166534;background:#fff;color:#166534;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='#fff'">✏️ Вставить в поле</button>
+        <button onclick="mentorSend('${msgId}')" style="padding:6px 12px;border:1.5px solid #166534;background:#166534;color:#fff;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif" onmouseover="this.style.background='#15803d'" onmouseout="this.style.background='#166534'">🌱 Ответить от ментора</button>
+      </div>`;
+    chat.appendChild(d);
+    scroll();
+    mb2.disabled = false;
+    mb2.textContent = '🌱 МЕНТОР';
+  })
+  .catch(()=>{
+    mb2.disabled = false;
+    mb2.textContent = '🌱 МЕНТОР';
+  });
+}
+
+
+function getMentorText(msgId){
+  const el = document.getElementById(msgId);
+  if(!el) return '';
+  const full = el.innerText || el.textContent || '';
+  // извлекаем только прямую речь между <<< >>>
+  const match = full.match(/<<<([\s\S]*?)>>>/);
+  if(match) return match[1].trim();
+  // fallback: убираем первое предложение-вступление если есть
+  const lines = full.split('\n').filter(l => l.trim());
+  // ищем строку с кавычками
+  for(const line of lines){
+    const q = line.match(/[«""](.+)[»""]/);
+    if(q) return q[1].trim();
+  }
+  return full.trim();
+}
+
+function mentorToField(msgId){
+  const t = getMentorText(msgId);
+  const inp = document.getElementById('inp');
+  inp.value = t;
+  grow(inp);
+  inp.focus();
+  // ставим курсор в конец
+  inp.setSelectionRange(inp.value.length, inp.value.length);
+}
+
+function mentorSend(msgId){
+  const t = getMentorText(msgId);
+  if(!t || loading) return;
+  // очищаем поле если что-то есть
+  const inp = document.getElementById('inp');
+  inp.value = ''; inp.style.height = 'auto';
+  // отправляем от имени фаундера
+  addFounder(t);
+  askReply();
+}
+
+function endSession(){
+  if(!confirm('Завершить питч-сессию?')) return;
+  if(isRec){ micStop(); }
+  // принудительно обновляем сайдбар перед показом итогов
+  const sc1=Math.round(sc.a), sc2=Math.round(sc.b), sc3=Math.round(sc.c);
+  ['a','b','c'].forEach((k,i)=>{
+    const v=Math.round(sc[k]);
+    document.getElementById('s'+(i+1)).style.width=v+'%';
+    document.getElementById('v'+(i+1)).textContent= v>0 ? v+'%' : '0%';
+  });
+  const chat=document.getElementById('chat');
+  const avg=Math.round((sc1+sc2+sc3)/3);
+  const grade = avg>=80?'Отлично 🏆':avg>=60?'Хорошо 👍':avg>=40?'Неплохо 💪':'Нужна практика 📚';
+  chat.innerHTML=`<div class="intro" style="gap:16px">
+    <h2>Сессия завершена</h2>
+    <div style="font-size:32px">${grade}</div>
+    <div style="font-size:15px;color:#555;line-height:1.8">
+      Убедительность: <b>${sc1}%</b><br>
+      Конкретность: <b>${sc2}%</b><br>
+      Уверенность: <b>${sc3}%</b><br><br>
+      <b>Средний балл: ${avg}%</b>
+    </div>
+    <button onclick="location.reload()" style="padding:12px 28px;background:#111;color:#fff;border:none;border-radius:4px;font-size:14px;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;margin-top:8px">НОВАЯ СЕССИЯ</button>
+  </div>`;
+  document.getElementById('qbox').innerHTML='';
+}
+
+if(!localStorage.getItem('vb_key'))showKey();else init();
+</script>
+</body>
+</html>
